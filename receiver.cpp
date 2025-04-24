@@ -2,13 +2,14 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #define F_CPU 16000000UL
 
 void timer1_init_10ms_interrupt() {
     TCCR1A = 0;              // Нормальный режим
     TCCR1B = (1 << WGM12);   // CTC режим
-    OCR1A = 12500 - 1;        // 5 мс при 64 делителе
+    OCR1A = 2500 - 1;        // 10 мс при 64 делителе
     TIMSK1 = (1 << OCIE1A);  // Включить прерывание по совпадению
     TCCR1B |= (1 << CS11) | (1 << CS10); // делитель 64
 }
@@ -52,12 +53,39 @@ uint16_t adc_read() {
     return ADC;
 }
 
+
+char is_one(uint16_t value) {
+    static const uint16_t MIN_ONE = 90;
+    if (value > MIN_ONE) return 1;
+    return 0;
+}
+
+bool read_started=false;
+bool ready_to_send=false;
+char buffer[1024];
+int bit_index=0;
+int byte_index=0;
 ISR(TIMER1_COMPA_vect) {
-    // Этот код вызывается каждые 5 мс
-    // PORTB ^= (1 << PB5); // Пример: переключить встроенный светодиод (D13)
-    uint16_t value = adc_read();
-    uart_send_uint16(value);
-    uart_send_string("\r\n"); // переход на новую строку
+    uint16_t value = (adc_read() + adc_read() + adc_read()) / 3;
+    // uart_send_uint16(value);
+    // uart_send_string("\r\n"); // переход на новую строку
+    if (read_started) {
+        buffer[byte_index] = (buffer[byte_index] << 1) | is_one(value);
+        bit_index++;
+        if (bit_index == 8) {
+            if (buffer[byte_index]=='\n' || byte_index == 1023) {
+                read_started=false;
+                ready_to_send=true;
+                bit_index = 0;
+                byte_index = 0;
+            } else {
+                bit_index = 0;
+                byte_index++;
+            }
+        }
+    } else if (is_one(value)) {
+        read_started=true;
+    }
 }
 
 int main(void) {
@@ -71,7 +99,11 @@ int main(void) {
     sei(); // Включить глобальные прерывания
 
     while (1) {
-        // Основной цикл, можно делать что угодно
+        if (ready_to_send) {
+            uart_send_string(buffer);
+            uart_send_string("\r\n");
+            ready_to_send=false;
+        }
     }
 
     return 0;
