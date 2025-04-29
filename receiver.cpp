@@ -27,20 +27,20 @@ void adc_init() {
 }
 
 // --- Отправка байта ---
-void uart_send_byte(uint8_t data) {
+void uart_send_byte(volatile uint8_t data) {
     while (!(UCSR0A & (1 << UDRE0))); // Ждём, пока буфер освободится
     UDR0 = data;
 }
 
 // --- Отправка строки ---
-void uart_send_string(const char *str) {
+void uart_send_string(volatile const char *str) {
     while (*str) {
         uart_send_byte(*str++);
     }
 }
 
 // --- Отправка числа (uint16_t) ---
-void uart_send_uint16(uint16_t value) {
+void uart_send_uint16(volatile uint16_t value) {
     char buffer[6];
     itoa(value, buffer, 10);
     uart_send_string(buffer);
@@ -60,20 +60,22 @@ char is_one(uint16_t value) {
     return 0;
 }
 
-bool read_started=false;
-bool ready_to_send=false;
-char buffer[1024];
-int bit_index=0;
-int byte_index=0;
+volatile bool read_started=false;
+volatile bool ready_to_send=false;
+#define BUFFER_SIZE 128
+volatile char buffer[BUFFER_SIZE];
+volatile int bit_index=0;
+volatile int byte_index=0;
 ISR(TIMER1_COMPA_vect) {
     uint16_t value = (adc_read() + adc_read() + adc_read()) / 3;
     // uart_send_uint16(value);
-    // uart_send_string("\r\n"); // переход на новую строку
     if (read_started) {
         buffer[byte_index] = (buffer[byte_index] << 1) | is_one(value);
         bit_index++;
         if (bit_index == 8) {
-            if (buffer[byte_index]=='\n' || byte_index == 1023) {
+
+            if (buffer[byte_index]=='\n' || byte_index == BUFFER_SIZE-2) {
+                buffer[byte_index+1] = 0;
                 read_started=false;
                 ready_to_send=true;
                 bit_index = 0;

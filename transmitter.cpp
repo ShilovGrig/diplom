@@ -12,10 +12,10 @@ void timer1_init_10ms_interrupt() {
     TCCR1B |= (1 << CS11) | (1 << CS10); // делитель 64
 }
 
-const char *message = "Hello world and all all all\n";
-int bit_index=0;
-int byte_index=0;
-bool stop_flag=false;
+volatile char message[] = " Hello world\n";
+volatile int bit_index=7;
+volatile int byte_index=0;
+volatile bool stop_flag=false;
 ISR(TIMER1_COMPA_vect) {
     // PORTD ^= (1 << PD2);
     if (!stop_flag) {
