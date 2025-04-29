@@ -5,11 +5,11 @@
 #define F_CPU 16000000UL
 
 void timer1_init_10ms_interrupt() {
-    TCCR1A = 0;              // Нормальный режим
-    TCCR1B = (1 << WGM12);   // CTC режим
-    OCR1A = 2500 - 1;        // 10 мс при 64 делителе
-    TIMSK1 = (1 << OCIE1A);  // Включить прерывание по совпадению
-    TCCR1B |= (1 << CS11) | (1 << CS10); // делитель 64
+    TCCR1A = 0;                    // Нормальный режим
+    TCCR1B = (1 << WGM12);         // CTC режим (TOP = OCR1A)
+    OCR1A = 199;                   // 199 - 100 мкс при делителе 8
+    TIMSK1 = (1 << OCIE1A);        // Разрешить прерывание по совпадению
+    TCCR1B |= (1 << CS11);         // Делитель 8
 }
 
 volatile char message[] = " Hello world\n";
