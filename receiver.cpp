@@ -6,12 +6,20 @@
 
 #define F_CPU 16000000UL
 
-void timer1_init_10ms_interrupt() {
+void timer1_init_100us_interrupt() {
     TCCR1A = 0;                    // Нормальный режим
     TCCR1B = (1 << WGM12);         // CTC режим (TOP = OCR1A)
     OCR1A = 199;                   // 100 мкс при делителе 8
     TIMSK1 = (1 << OCIE1A);        // Разрешить прерывание по совпадению
     TCCR1B |= (1 << CS11);         // Делитель 8
+}
+
+void timer1_init_10ms_interrupt() {
+    TCCR1A = 0;              // Нормальный режим
+    TCCR1B = (1 << WGM12);   // CTC режим
+    OCR1A = 2500 - 1;        // 10 мс при 64 делителе
+    TIMSK1 = (1 << OCIE1A);  // Включить прерывание по совпадению
+    TCCR1B |= (1 << CS11) | (1 << CS10); // делитель 64
 }
 
 void uart_init(uint16_t ubrr) {
@@ -68,7 +76,7 @@ volatile int bit_index=0;
 volatile int byte_index=0;
 ISR(TIMER1_COMPA_vect) {
     uint16_t value = (adc_read() + adc_read() + adc_read()) / 3;
-    // uart_send_uint16(value);
+    uart_send_uint16(value);
     if (read_started) {
         buffer[byte_index] = (buffer[byte_index] << 1) | is_one(value);
         bit_index++;
@@ -91,10 +99,10 @@ ISR(TIMER1_COMPA_vect) {
 }
 
 int main(void) {
-    // Настроить A2 (PC2) как вход
     DDRC &= ~(1 << PC0);
 
     timer1_init_10ms_interrupt();
+    // timer1_init_100us_interrupt();
     uart_init(8);
     adc_init();
 
