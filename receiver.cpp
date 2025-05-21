@@ -22,6 +22,14 @@ void timer1_init_10ms_interrupt() {
     TCCR1B |= (1 << CS11) | (1 << CS10); // делитель 64
 }
 
+void timer1_init_100ms_interrupt() {
+    TCCR1A = 0;              // Нормальный режим
+    TCCR1B = (1 << WGM12);   // CTC режим
+    OCR1A = 25000 - 1;        // 10 мс при 64 делителе
+    TIMSK1 = (1 << OCIE1A);  // Включить прерывание по совпадению
+    TCCR1B |= (1 << CS11) | (1 << CS10); // делитель 64
+}
+
 void uart_init(uint16_t ubrr) {
     UBRR0H = (uint8_t)(ubrr >> 8);
     UBRR0L = (uint8_t)ubrr;
@@ -55,33 +63,36 @@ void uart_send_uint16(volatile uint16_t value) {
 }
 
 uint16_t adc_read() {
-    ADMUX = (ADMUX & 0xF0);                    // выбрать канал 0 (A0)
+    ADMUX = (ADMUX & 0xF0) | 0x00;                    // выбрать канал 0 (A0)
     ADCSRA |= (1 << ADSC);                     // старт
     while (ADCSRA & (1 << ADSC));              // ожидание завершения
     return ADC;
 }
 
 
-char is_one(uint16_t value) {
-    static const uint16_t MIN_ONE = 90;
+char is_one(const uint16_t value) {
+    static const uint16_t MIN_ONE = 60;
     if (value > MIN_ONE) return 1;
     return 0;
 }
 
-volatile bool read_started=false;
-volatile bool ready_to_send=false;
-#define BUFFER_SIZE 128
+#define BUFFER_SIZE 28
 volatile char buffer[BUFFER_SIZE];
 volatile int bit_index=0;
 volatile int byte_index=0;
+volatile bool read_started=false;
+volatile bool ready_to_send=false;
 ISR(TIMER1_COMPA_vect) {
-    uint16_t value = (adc_read() + adc_read() + adc_read()) / 3;
-    uart_send_uint16(value);
+    uint16_t value = adc_read(); //(adc_read() + adc_read() + adc_read()) / 3;
+    uart_send_uint16(value); // DEBUG
+    uart_send_string("\r\n"); // DEBUG
     if (read_started) {
+        // uart_send_string("  inside  1\r\n"); // DEBUG
         buffer[byte_index] = (buffer[byte_index] << 1) | is_one(value);
         bit_index++;
+        // uart_send_uint16(value); // DEBUG
+        // uart_send_string("\r\n"); // DEBUG
         if (bit_index == 8) {
-
             if (buffer[byte_index]=='\n' || byte_index == BUFFER_SIZE-2) {
                 buffer[byte_index+1] = 0;
                 read_started=false;
@@ -92,6 +103,7 @@ ISR(TIMER1_COMPA_vect) {
                 bit_index = 0;
                 byte_index++;
             }
+            // uart_send_string("  inside  2\r\n"); // DEBUG
         }
     } else if (is_one(value)) {
         read_started=true;
@@ -101,13 +113,13 @@ ISR(TIMER1_COMPA_vect) {
 int main(void) {
     DDRC &= ~(1 << PC0);
 
-    timer1_init_10ms_interrupt();
+    timer1_init_100ms_interrupt();
     // timer1_init_100us_interrupt();
     uart_init(8);
     adc_init();
 
     sei(); // Включить глобальные прерывания
-
+    uart_send_string("start\r\n");
     while (1) {
         if (ready_to_send) {
             uart_send_string(buffer);
