@@ -6,7 +6,7 @@ PORT1 = /dev/ttyUSB0
 PORT2 = /dev/ttyUSB1
 
 AVRDUDE = avrdude
-CC = avr-gcc
+CC = avr-g++
 OBJCOPY = avr-objcopy
 
 CFLAGS = -Wall -Wextra -Wpedantic -Os -DF_CPU=$(F_CPU) -mmcu=$(MCU)

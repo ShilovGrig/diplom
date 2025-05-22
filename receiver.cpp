@@ -62,6 +62,17 @@ void uart_send_uint16(volatile uint16_t value) {
     uart_send_string(buffer);
 }
 
+void uart_send_string_enh(volatile const char *str) {
+    while (*str) {
+        for (int bit_index=7; bit_index >= 0 ; --bit_index) {
+            uart_send_uint16((*str & (1 << bit_index)) >> bit_index);
+        }
+        uart_send_byte(' ');
+        uart_send_byte(*str++);
+        uart_send_string("\r\n");
+    }
+}
+
 uint16_t adc_read() {
     ADMUX = (ADMUX & 0xF0) | 0x00;                    // выбрать канал 0 (A0)
     ADCSRA |= (1 << ADSC);                     // старт
@@ -70,12 +81,12 @@ uint16_t adc_read() {
 }
 
 char is_one(const uint16_t value) {
-    static const uint16_t MAX_ZERO = 800;
+    static const uint16_t MAX_ZERO = 700;
     if (value < MAX_ZERO) return 1;
     return 0;
 }
 
-#define BUFFER_SIZE 28
+#define BUFFER_SIZE 70
 volatile char buffer[BUFFER_SIZE];
 volatile int bit_index=0;
 volatile int byte_index=0;
@@ -92,7 +103,7 @@ ISR(TIMER1_COMPA_vect) {
         // uart_send_uint16(value); // DEBUG
         // uart_send_string("\r\n"); // DEBUG
         if (bit_index == 8) {
-            if (buffer[byte_index]=='\n' || byte_index == BUFFER_SIZE-2) {
+            if (buffer[byte_index]=='\0' || byte_index == BUFFER_SIZE-2) {
                 buffer[byte_index+1] = 0;
                 read_started=false;
                 ready_to_send=true;
@@ -121,7 +132,7 @@ int main(void) {
     uart_send_string("start\r\n");
     while (1) {
         if (ready_to_send) {
-            uart_send_string(buffer);
+            uart_send_string_enh(buffer);
             uart_send_string("\r\n");
             ready_to_send=false;
         }

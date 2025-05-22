@@ -56,7 +56,7 @@ void uart_send_uint16(volatile uint16_t value) {
     uart_send_string(buffer);
 }
 
-volatile char message[] = " Hello world\n\0";
+volatile char message[] = "\x01Hello worldHello worldHello worldHello worldHello worldHello world\n\0";
 volatile int bit_index=0; // с начала, чтобы вывести первую незначащую 1
 volatile int byte_index=0;
 volatile bool stop_flag=false;
@@ -85,10 +85,10 @@ int main(void) {
     // Настроить D2 (PD2) как выход
     DDRD |= (1 << PD2);
 
-    uart_init(8); // DEBUG
+    uart_init(8);
     timer1_init_10ms_interrupt();
     // timer1_init_100us_interrupt();
-    message[0] = (char)1;
+
     sei(); // Включить глобальные прерывания
 
     volatile unsigned char side_effect = 0;
