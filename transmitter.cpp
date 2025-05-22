@@ -5,6 +5,7 @@
 
 #define F_CPU 16000000UL
 
+// Timer inits variations
 void timer1_init_100us_interrupt() {
     TCCR1A = 0;                    // Нормальный режим
     TCCR1B = (1 << WGM12);         // CTC режим (TOP = OCR1A)
@@ -29,6 +30,7 @@ void timer1_init_100ms_interrupt() {
     TCCR1B |= (1 << CS11) | (1 << CS10); // делитель 64
 }
 
+// UART write for debug
 void uart_init(uint16_t ubrr) {
     UBRR0H = (uint8_t)(ubrr >> 8);
     UBRR0L = (uint8_t)ubrr;
@@ -56,21 +58,27 @@ void uart_send_uint16(volatile uint16_t value) {
     uart_send_string(buffer);
 }
 
-volatile char message[] = "\x01Hello worldHello worldHello worldHello worldHello worldHello world\n\0";
+// Main code
+
+void set_port(int one_or_zero) { // WARNING we breaking all other PIND sets
+    PORTD = (one_or_zero << PD2);
+}
+
+volatile char message[] = "\x01Hello world Hello world\n";
 volatile int bit_index=0; // с начала, чтобы вывести первую незначащую 1
 volatile int byte_index=0;
-volatile bool stop_flag=false;
+volatile bool is_send_stopped=false;
 ISR(TIMER1_COMPA_vect) {
     // PORTD ^= (1 << PD2);
-    if (!stop_flag) {
+    if (!is_send_stopped) {
         if (!message[byte_index]) { // если \0
-            stop_flag=true;
-            PORTD &= ~(1 << PD2); // сбросить пин в 0
+            is_send_stopped=true;
+            set_port(0);
         }
         else {
             int one_or_zero = (message[byte_index] & (1 << bit_index)) >> bit_index ; // DEBUG
             uart_send_uint16(one_or_zero); // DEBUG
-            PORTD = (one_or_zero << PD2);
+            set_port(one_or_zero);
             bit_index--;
             if (bit_index == -1) {
                 bit_index=7;
@@ -87,7 +95,6 @@ int main(void) {
 
     uart_init(8);
     timer1_init_10ms_interrupt();
-    // timer1_init_100us_interrupt();
 
     sei(); // Включить глобальные прерывания
 

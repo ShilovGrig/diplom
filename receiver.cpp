@@ -124,15 +124,16 @@ int main(void) {
     DDRC &= ~(1 << PC0);
 
     timer1_init_10ms_interrupt();
-    // timer1_init_100us_interrupt();
     uart_init(8);
     adc_init();
 
     sei(); // Включить глобальные прерывания
-    uart_send_string("start\r\n");
+
+    uart_send_string("start\r\n"); // DEBUG
     while (1) {
         if (ready_to_send) {
-            uart_send_string_enh(buffer);
+            // uart_send_string_enh(buffer);
+            uart_send_string(buffer);
             uart_send_string("\r\n");
             ready_to_send=false;
         }
