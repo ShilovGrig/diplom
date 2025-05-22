@@ -86,7 +86,7 @@ int main(void) {
     DDRD |= (1 << PD2);
 
     uart_init(8); // DEBUG
-    timer1_init_100ms_interrupt();
+    timer1_init_10ms_interrupt();
     // timer1_init_100us_interrupt();
     message[0] = (char)1;
     sei(); // Включить глобальные прерывания

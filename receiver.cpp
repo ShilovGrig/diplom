@@ -69,10 +69,9 @@ uint16_t adc_read() {
     return ADC;
 }
 
-
 char is_one(const uint16_t value) {
-    static const uint16_t MIN_ONE = 60;
-    if (value > MIN_ONE) return 1;
+    static const uint16_t MAX_ZERO = 800;
+    if (value < MAX_ZERO) return 1;
     return 0;
 }
 
@@ -83,9 +82,9 @@ volatile int byte_index=0;
 volatile bool read_started=false;
 volatile bool ready_to_send=false;
 ISR(TIMER1_COMPA_vect) {
-    uint16_t value = adc_read(); //(adc_read() + adc_read() + adc_read()) / 3;
-    uart_send_uint16(value); // DEBUG
-    uart_send_string("\r\n"); // DEBUG
+    uint16_t value = (adc_read() + adc_read() + adc_read()) / 3;
+    // uart_send_uint16(value); // DEBUG
+    // uart_send_string("\r\n"); // DEBUG
     if (read_started) {
         // uart_send_string("  inside  1\r\n"); // DEBUG
         buffer[byte_index] = (buffer[byte_index] << 1) | is_one(value);
@@ -113,7 +112,7 @@ ISR(TIMER1_COMPA_vect) {
 int main(void) {
     DDRC &= ~(1 << PC0);
 
-    timer1_init_100ms_interrupt();
+    timer1_init_10ms_interrupt();
     // timer1_init_100us_interrupt();
     uart_init(8);
     adc_init();
@@ -127,6 +126,5 @@ int main(void) {
             ready_to_send=false;
         }
     }
-
     return 0;
 }
