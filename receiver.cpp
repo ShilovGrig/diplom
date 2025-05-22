@@ -25,14 +25,14 @@ void timer1_init_10ms_interrupt() {
 void timer1_init_100ms_interrupt() {
     TCCR1A = 0;              // Нормальный режим
     TCCR1B = (1 << WGM12);   // CTC режим
-    OCR1A = 25000 - 1;        // 10 мс при 64 делителе
+    OCR1A = 25000 - 1;        // 100 мс при 64 делителе
     TIMSK1 = (1 << OCIE1A);  // Включить прерывание по совпадению
     TCCR1B |= (1 << CS11) | (1 << CS10); // делитель 64
 }
 
 void uart_init(uint16_t ubrr) {
-    UBRR0H = (uint8_t)(ubrr >> 8);
-    UBRR0L = (uint8_t)ubrr;
+    UBRR0H = static_cast<uint8_t>(ubrr >> 8);
+    UBRR0L = static_cast<uint8_t>(ubrr);
     UCSR0B = (1 << TXEN0);                    // Включить передатчик
     UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);   // 8 бит данных, 1 стоп-бит
 }
@@ -81,7 +81,7 @@ uint16_t adc_read() {
 }
 
 char is_one(const uint16_t value) {
-    static const uint16_t MAX_ZERO = 700;
+    static const uint16_t MAX_ZERO = 750;
     if (value < MAX_ZERO) return 1;
     return 0;
 }

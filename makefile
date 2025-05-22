@@ -9,7 +9,7 @@ AVRDUDE = avrdude
 CC = avr-g++
 OBJCOPY = avr-objcopy
 
-CFLAGS = -Wall -Wextra -Wpedantic -Os -DF_CPU=$(F_CPU) -mmcu=$(MCU)
+CFLAGS = -std=c++17 -Wall -Wextra -Wpedantic -O2 -DF_CPU=$(F_CPU) -mmcu=$(MCU)
 
 all: transmitter.hex receiver.hex
 
