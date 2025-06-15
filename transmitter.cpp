@@ -8,7 +8,8 @@
 void timer1_init_100us_interrupt() {
     TCCR1A = 0;                    // Нормальный режим
     TCCR1B = (1 << WGM12);         // CTC режим (TOP = OCR1A)
-    OCR1A = 199;                   // 199 - 100 мкс при делителе 8
+    // OCR1A = 199;                   // 199 - 100 мкс при делителе 8
+    OCR1A = 2000 - 1;                   // 100 мкс при делителе 8
     TIMSK1 = (1 << OCIE1A);        // Разрешить прерывание по совпадению
     TCCR1B |= (1 << CS11);         // Делитель 8
 }
@@ -80,7 +81,8 @@ public:
 };
 volatile bool Send_State::is_send_stopped_flag=false;
 
-volatile char message[] = "\x01Hello world Hello world\n"; // TODO тоже в инварианты Sender, или новый класс
+// volatile char message[] = "\x01Hello world Hello world Hello world Hello world Hello world Hello world Hello world Hello world Hello world Hello world\n"; // TODO тоже в инварианты Sender, или новый класс
+volatile char message[] = "\x01Hello world\n"; // TODO тоже в инварианты Sender, или новый класс
 
 class Sender {
     static volatile int bit_index;
@@ -88,13 +90,13 @@ class Sender {
 public:
     static void send_bit() {
         int one_or_zero = (message[byte_index] & (1 << bit_index)) >> bit_index ; // DEBUG
-        uart_send_uint16(one_or_zero); // DEBUG
+        // uart_send_uint16(one_or_zero); // DEBUG
         set_port(one_or_zero);
         bit_index--;
         if (bit_index == -1) {
             bit_index=7;
             byte_index++;
-            uart_send_string("\r\n"); // DEBUG
+            // uart_send_string("\r\n"); // DEBUG
         }
         if (!message[Sender::byte_index]) { // если достигли \0
             Send_State::trigger_send_stop();

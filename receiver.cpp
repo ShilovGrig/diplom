@@ -1,7 +1,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
-#include <stdlib.h>
+#include <stdlib.h> // NOLINT
 #include <stdbool.h>
 
 #define F_CPU 16000000UL
@@ -9,7 +9,8 @@
 void timer1_init_100us_interrupt() {
     TCCR1A = 0;                    // Нормальный режим
     TCCR1B = (1 << WGM12);         // CTC режим (TOP = OCR1A)
-    OCR1A = 199;                   // 100 мкс при делителе 8
+    // OCR1A = 199;                   // 100 мкс при делителе 8
+    OCR1A = 2006 - 1;                   // 100 мкс при делителе 8
     TIMSK1 = (1 << OCIE1A);        // Разрешить прерывание по совпадению
     TCCR1B |= (1 << CS11);         // Делитель 8
 }
@@ -17,7 +18,8 @@ void timer1_init_100us_interrupt() {
 void timer1_init_10ms_interrupt() {
     TCCR1A = 0;              // Нормальный режим
     TCCR1B = (1 << WGM12);   // CTC режим
-    OCR1A = 2500 - 1;        // 10 мс при 64 делителе
+    OCR1A = 2506 - 1;        // 10 мс при 64 делителе
+    // OCR1A = 2500 - 1;        // 10 мс при 64 делителе
     TIMSK1 = (1 << OCIE1A);  // Включить прерывание по совпадению
     TCCR1B |= (1 << CS11) | (1 << CS10); // делитель 64
 }
@@ -81,19 +83,20 @@ uint16_t adc_read() {
 }
 
 char is_one(const uint16_t value) {
-    static const uint16_t MAX_ZERO = 750;
+    static const uint16_t MAX_ZERO = 400;
     if (value < MAX_ZERO) return 1;
     return 0;
 }
 
-#define BUFFER_SIZE 70
+#define BUFFER_SIZE 256
 volatile char buffer[BUFFER_SIZE];
 volatile int bit_index=0;
 volatile int byte_index=0;
 volatile bool read_started=false;
 volatile bool ready_to_send=false;
 ISR(TIMER1_COMPA_vect) {
-    uint16_t value = (adc_read() + adc_read() + adc_read()) / 3;
+    uint16_t value = adc_read();
+    // uint16_t value = (adc_read() + adc_read() + adc_read()) / 3;
     // uart_send_uint16(value); // DEBUG
     // uart_send_string("\r\n"); // DEBUG
     if (read_started) {
