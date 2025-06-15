@@ -1,7 +1,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
-#include <stdlib.h>
+#include <stdlib.h> // NOLINT
 #include <stdbool.h>
 
 #define F_CPU 16000000UL
@@ -9,7 +9,8 @@
 void timer1_init_100us_interrupt() {
     TCCR1A = 0;                    // Нормальный режим
     TCCR1B = (1 << WGM12);         // CTC режим (TOP = OCR1A)
-    OCR1A = 199;                   // 100 мкс при делителе 8
+    // OCR1A = 199;                   // 100 мкс при делителе 8
+    OCR1A = 2006 - 1;                   // 100 мкс при делителе 8
     TIMSK1 = (1 << OCIE1A);        // Разрешить прерывание по совпадению
     TCCR1B |= (1 << CS11);         // Делитель 8
 }
@@ -17,7 +18,8 @@ void timer1_init_100us_interrupt() {
 void timer1_init_10ms_interrupt() {
     TCCR1A = 0;              // Нормальный режим
     TCCR1B = (1 << WGM12);   // CTC режим
-    OCR1A = 2500 - 1;        // 10 мс при 64 делителе
+    OCR1A = 2506 - 1;        // 10 мс при 64 делителе
+    // OCR1A = 2500 - 1;        // 10 мс при 64 делителе
     TIMSK1 = (1 << OCIE1A);  // Включить прерывание по совпадению
     TCCR1B |= (1 << CS11) | (1 << CS10); // делитель 64
 }
@@ -25,14 +27,14 @@ void timer1_init_10ms_interrupt() {
 void timer1_init_100ms_interrupt() {
     TCCR1A = 0;              // Нормальный режим
     TCCR1B = (1 << WGM12);   // CTC режим
-    OCR1A = 25000 - 1;        // 10 мс при 64 делителе
+    OCR1A = 25000 - 1;        // 100 мс при 64 делителе
     TIMSK1 = (1 << OCIE1A);  // Включить прерывание по совпадению
     TCCR1B |= (1 << CS11) | (1 << CS10); // делитель 64
 }
 
 void uart_init(uint16_t ubrr) {
-    UBRR0H = (uint8_t)(ubrr >> 8);
-    UBRR0L = (uint8_t)ubrr;
+    UBRR0H = static_cast<uint8_t>(ubrr >> 8);
+    UBRR0L = static_cast<uint8_t>(ubrr);
     UCSR0B = (1 << TXEN0);                    // Включить передатчик
     UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);   // 8 бит данных, 1 стоп-бит
 }
@@ -81,19 +83,20 @@ uint16_t adc_read() {
 }
 
 char is_one(const uint16_t value) {
-    static const uint16_t MAX_ZERO = 700;
+    static const uint16_t MAX_ZERO = 400;
     if (value < MAX_ZERO) return 1;
     return 0;
 }
 
-#define BUFFER_SIZE 70
+#define BUFFER_SIZE 256
 volatile char buffer[BUFFER_SIZE];
 volatile int bit_index=0;
 volatile int byte_index=0;
 volatile bool read_started=false;
 volatile bool ready_to_send=false;
 ISR(TIMER1_COMPA_vect) {
-    uint16_t value = (adc_read() + adc_read() + adc_read()) / 3;
+    uint16_t value = adc_read();
+    // uint16_t value = (adc_read() + adc_read() + adc_read()) / 3;
     // uart_send_uint16(value); // DEBUG
     // uart_send_string("\r\n"); // DEBUG
     if (read_started) {
@@ -124,15 +127,16 @@ int main(void) {
     DDRC &= ~(1 << PC0);
 
     timer1_init_10ms_interrupt();
-    // timer1_init_100us_interrupt();
     uart_init(8);
     adc_init();
 
     sei(); // Включить глобальные прерывания
-    uart_send_string("start\r\n");
+
+    uart_send_string("start\r\n"); // DEBUG
     while (1) {
         if (ready_to_send) {
-            uart_send_string_enh(buffer);
+            // uart_send_string_enh(buffer);
+            uart_send_string(buffer);
             uart_send_string("\r\n");
             ready_to_send=false;
         }
